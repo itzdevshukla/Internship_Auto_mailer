@@ -60,7 +60,7 @@ def email_worker(sender, password, emails, subject, body_html, delay, resume_dat
 
     
     try:
-        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=15)
         server.ehlo()
         server.starttls()
         server.login(sender, password)
