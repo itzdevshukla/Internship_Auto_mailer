@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internship Mailer Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        /* Custom scrollbar for logs */
+        .log-container::-webkit-scrollbar { width: 8px; }
+        .log-container::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+        .log-container::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .log-container::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        /* Terminal Styling */
+        .log-container { height: 250px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; background-color: #000; color: #0f0; border: 1px solid #333; }
+        .log-info { color: #0f0; }
+        .log-success { color: #0f0; font-weight: bold; }
+        .log-error { color: #f00; font-weight: bold; }
+        .log-countdown { color: #ff0; }
+        .log-done { color: #0ff; font-weight: bold; }
+        
+        /* Terminal Cursor */
+        .terminal-cursor { display: inline-block; width: 8px; height: 15px; background-color: #0f0; animation: blink 1s step-end infinite; vertical-align: middle; margin-left: 4px; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        
+        /* Quill Dark Mode Customization */
+        .ql-toolbar.ql-snow { border-color: rgba(71, 85, 105, 0.5); background: rgba(30, 41, 59, 0.8); border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; }
+        .ql-container.ql-snow { border-color: rgba(71, 85, 105, 0.5); border-bottom-left-radius: 0.75rem; border-bottom-right-radius: 0.75rem; }
+        .ql-snow .ql-stroke { stroke: #cbd5e1; }
+        .ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill { fill: #cbd5e1; }
+        .ql-snow .ql-picker { color: #cbd5e1; }
+        .ql-editor { min-height: 200px; font-family: inherit; font-size: 0.95rem; line-height: 1.6; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+<div class="max-w-5xl w-full glass rounded-3xl shadow-2xl p-8 space-y-8 relative overflow-hidden">
+    <!-- Decorative blobs -->
+    <div class="absolute -top-32 -right-32 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 pointer-events-none"></div>
+    <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 pointer-events-none"></div>
+
+    <div class="text-center space-y-2 relative z-10">
+        <h1 class="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 tracking-tight">
+            Internship Auto-Mailer
+        </h1>
+        <p class="text-slate-400 text-lg">Manage campaigns, upload resumes, and send securely.</p>
+    </div>
+
+    <form id="campaignForm" class="space-y-6 relative z-10" enctype="multipart/form-data">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Left Column: Config -->
+            <div class="space-y-6">
+                <div class="glass p-6 rounded-2xl border border-slate-700/50">
+                    <h2 class="text-xl font-semibold text-blue-400 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path></svg>
+                        Sender Details
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Email Address</label>
+                            <input type="email" name="sender_email" required
+                                   class="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">App Password</label>
+                            <input type="password" name="app_password" required
+                                   class="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-2xl border border-slate-700/50">
+                    <h2 class="text-xl font-semibold text-purple-400 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        Attachments & Settings
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Resume (PDF File)</label>
+                            <input type="file" name="resume" accept=".pdf" required
+                                   class="w-full text-sm text-slate-300 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-purple-500/20 file:text-purple-400 hover:file:bg-purple-500/30 transition-colors cursor-pointer border border-slate-600 rounded-xl bg-slate-800/50">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2 flex justify-between">
+                                <span>Delay Between Emails</span>
+                                <span class="text-purple-400 font-bold bg-purple-500/20 px-2 rounded" id="delayVal">35s</span>
+                            </label>
+                            <input type="range" name="delay" min="5" max="120" value="35" oninput="document.getElementById('delayVal').innerText = this.value + 's'"
+                                   class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Audience -->
+            <div class="glass p-6 rounded-2xl border border-slate-700/50 flex flex-col">
+                <h2 class="text-xl font-semibold text-emerald-400 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    Target Audience
+                </h2>
+                
+                <div class="space-y-4 flex-grow flex flex-col">
+                    <!-- File Drop -->
+                    <div class="border-2 border-dashed border-slate-600 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-emerald-500 hover:bg-slate-800/80 transition-all bg-slate-800/50 cursor-pointer group" id="dropzone">
+                        <div class="bg-slate-700 p-3 rounded-full mb-3 group-hover:scale-110 transition-transform">
+                            <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        </div>
+                        <p class="text-sm font-medium text-slate-200 mb-1">Upload Excel / CSV</p>
+                        <p class="text-xs text-slate-400">We'll extract the emails automatically</p>
+                        <input type="file" id="excelUpload" accept=".xlsx,.xls,.csv" class="hidden">
+                    </div>
+
+                    <!-- Textarea -->
+                    <div class="flex-grow flex flex-col">
+                        <label class="block text-sm font-medium text-slate-300 mb-1 flex justify-between">
+                            <span>Recipient Emails</span>
+                            <span class="text-xs bg-slate-700 px-2 py-0.5 rounded text-slate-300">Total: <span id="emailCount" class="font-bold text-emerald-400">0</span></span>
+                        </label>
+                        <textarea name="emails" id="emailList" required placeholder="Paste emails here (one per line)...&#10;example1@hr.com&#10;example2@recruitment.com"
+                                  class="w-full flex-grow min-h-[150px] bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50 transition-all resize-y font-mono text-sm leading-relaxed"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Content -->
+        <div class="glass p-6 rounded-2xl border border-slate-700/50">
+            <h2 class="text-xl font-semibold text-pink-400 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                Email Content
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Subject</label>
+                    <input type="text" name="subject" value="Application for Cybersecurity Internship – June–July 2026 | Dev Shukla" required
+                           class="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/50 transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Message Body</label>
+                    <div id="editor-container" class="bg-slate-800/50 text-white rounded-b-xl">
+<p>Dear Sir/Madam,</p>
+<p><br></p>
+<p>I am writing to express my strong interest in a <strong>June–July 2026 internship with the Cyber Cell</strong>. I am a <strong>B.Tech Computer Science student at GLA University (8.44 CPI)</strong> with a deep passion for <strong>digital forensics, ethical hacking, and cyber crime investigation</strong>.</p>
+<p><br></p>
+<p>I have built a strong practical foundation in network security and vulnerability assessment through hands-on labs and CTF challenges. I am highly proficient with industry-standard tools, including <strong>Wireshark, Nmap, Burp Suite, and Linux-based security environments</strong>.</p>
+<p><br></p>
+<p>Beyond academics, I actively promote cybersecurity awareness and mentor peers in practical security sessions.</p>
+<p><br></p>
+<p>I am eager to learn how <strong>cyber crime investigations, digital evidence analysis, and incident response</strong> are conducted in real-world law enforcement scenarios. Working under the Cyber Cell's expert guidance would be an invaluable opportunity to elevate my practical knowledge while contributing to your mission.</p>
+<p><br></p>
+<p>Please find my resume attached for your consideration. I would be grateful for the opportunity to contribute and learn from your esteemed department.</p>
+<p><br></p>
+<p>Thank you for your time.</p>
+<p><br></p>
+<p>Yours sincerely,</p>
+<p><strong>Dev Shukla</strong></p>
+<p>+91-7607859041</p>
+<p>devs44236@gmail.com</p>
+                    </div>
+                    <input type="hidden" name="body_html" id="bodyHtml">
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex space-x-4">
+            <button type="submit" id="submitBtn" class="flex-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500 text-white font-bold py-4 px-6 rounded-2xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transform transition-all hover:scale-[1.01] active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-900 text-lg flex items-center justify-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                <span>Launch Internship Campaign</span>
+            </button>
+            <button type="button" id="terminateBtn" class="hidden bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-6 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.3)] transform transition-all hover:scale-[1.01] active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500 text-lg flex items-center justify-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
+                <span>Terminate</span>
+            </button>
+        </div>
+    </form>
+
+    <!-- Progress / Logs -->
+    <div id="logSection" class="hidden space-y-3 pt-6 border-t border-slate-700/50 relative z-10">
+        <h2 class="text-lg font-semibold text-slate-200 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-blue-400 animate-spin" id="logSpinner" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            Live Campaign Terminal
+        </h2>
+        <div class="log-container bg-[#0a0f1c] border border-slate-700/50 rounded-xl p-5 text-sm shadow-inner" id="logs">
+            <!-- Logs appear here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize Quill Editor
+    const quill = new Quill('#editor-container', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link', 'clean']
+            ]
+        }
+    });
+
+    // Handle Dropzone click
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('excelUpload');
+    const emailList = document.getElementById('emailList');
+    const emailCount = document.getElementById('emailCount');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    
+    // Drag and Drop styling
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, () => {
+            dropzone.classList.add('border-emerald-500', 'bg-slate-800/80');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, () => {
+            dropzone.classList.remove('border-emerald-500', 'bg-slate-800/80');
+        }, false);
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if(files.length) handleFileUpload(files[0]);
+    }, false);
+
+    // Handle File Upload for Extraction
+    fileInput.addEventListener('change', (e) => {
+        if(e.target.files.length > 0) handleFileUpload(e.target.files[0]);
+    });
+
+    async function handleFileUpload(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const originalHtml = dropzone.innerHTML;
+        dropzone.innerHTML = `<p class="text-emerald-400 font-medium animate-pulse text-sm">Extracting emails...</p>`;
+        
+        try {
+            const res = await fetch('/api/extract-emails', { method: 'POST', body: formData });
+            const data = await res.json();
+            if(data.emails) {
+                const currentEmails = emailList.value.trim() ? emailList.value.split('\n') : [];
+                // Normalize and filter valid emails
+                const newEmails = data.emails.filter(e => e && e !== 'nan' && e.includes('@'));
+                const allEmails = [...new Set([...currentEmails, ...newEmails])];
+                
+                emailList.value = allEmails.join('\n');
+                updateCount();
+                dropzone.innerHTML = `
+                    <div class="bg-emerald-500/20 p-2 rounded-full mb-2">
+                        <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <p class="text-emerald-400 font-bold text-sm">Added ${newEmails.length} new emails!</p>
+                `;
+            } else {
+                dropzone.innerHTML = `<p class="text-red-400 text-sm">Error: ${data.error}</p>`;
+            }
+        } catch(err) {
+            dropzone.innerHTML = `<p class="text-red-400 text-sm">Upload failed.</p>`;
+        }
+        
+        setTimeout(() => {
+            dropzone.innerHTML = originalHtml;
+        }, 3000);
+    }
+
+    // Update counter
+    const updateCount = () => {
+        const val = emailList.value.trim();
+        emailCount.innerText = val ? val.split('\n').filter(e=>e.trim()).length : 0;
+    };
+    emailList.addEventListener('input', updateCount);
+
+    // Form Submission
+    const form = document.getElementById('campaignForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const terminateBtn = document.getElementById('terminateBtn');
+    const logSection = document.getElementById('logSection');
+    const logs = document.getElementById('logs');
+    const logSpinner = document.getElementById('logSpinner');
+    let eventSource = null;
+    
+    const cursorHTML = '<span class="terminal-cursor"></span>';
+
+    terminateBtn.addEventListener('click', async () => {
+        terminateBtn.disabled = true;
+        terminateBtn.innerHTML = '<svg class="w-6 h-6 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Stopping...</span>';
+        await fetch('/api/terminate', { method: 'POST' });
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        submitBtn.classList.add('hidden');
+        terminateBtn.classList.remove('hidden');
+        terminateBtn.disabled = false;
+        terminateBtn.innerHTML = '<svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg><span>Terminate</span>';
+        
+        logSection.classList.remove('hidden');
+        logSpinner.classList.remove('hidden');
+        logs.innerHTML = '';
+        
+        // Capture Quill content and enforce zero margin on paragraphs so signature stays tight in email clients
+        let htmlContent = quill.root.innerHTML;
+        htmlContent = htmlContent.replace(/<p>/gi, '<p style="margin: 0; padding: 0;">');
+        document.getElementById('bodyHtml').value = htmlContent;
+        
+        const formData = new FormData(form);
+        
+        try {
+            const res = await fetch('/api/send', { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            if(!res.ok) {
+                appendLog('error', `Error: ${data.error}`);
+                resetBtn();
+                return;
+            }
+
+            // Start listening to SSE
+            if(eventSource) eventSource.close();
+            eventSource = new EventSource('/api/stream');
+            
+            eventSource.addEventListener('info', (e) => appendLog('info', e.data));
+            eventSource.addEventListener('success', (e) => appendLog('success', e.data));
+            eventSource.addEventListener('error', (e) => appendLog('error', e.data));
+            
+            eventSource.addEventListener('countdown', (e) => {
+                let lastLog = logs.lastElementChild;
+                if (lastLog && lastLog.classList.contains('log-countdown')) {
+                    const timeStr = new Date().toLocaleTimeString([], {hour12: false});
+                    lastLog.innerHTML = `<span class="opacity-50 mr-2">[${timeStr}]</span> <span class="mr-2">></span> <span>${e.data}</span>${cursorHTML}`;
+                } else {
+                    appendLog('countdown', e.data);
+                }
+            });
+            
+            eventSource.addEventListener('done', (e) => {
+                appendLog('done', e.data);
+                eventSource.close();
+                logSpinner.classList.add('hidden');
+                resetBtn();
+            });
+            
+        } catch (err) {
+            appendLog('error', 'Failed to connect to server.');
+            resetBtn();
+        }
+    });
+
+    function resetBtn() {
+        terminateBtn.classList.add('hidden');
+        submitBtn.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg> <span>Launch New Campaign</span>';
+    }
+
+    function appendLog(type, msg) {
+        // remove old cursor if exists
+        const oldCursor = document.querySelector('.terminal-cursor');
+        if(oldCursor) oldCursor.remove();
+
+        const div = document.createElement('div');
+        div.className = `log-${type} mb-1 flex`;
+        
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], {hour12: false});
+        
+        let icon = '>';
+        if(type === 'success') icon = '✓';
+        if(type === 'error') icon = '✗';
+        if(type === 'done') icon = '★';
+        
+        div.innerHTML = `<span class="opacity-50 mr-2">[${timeStr}]</span> <span class="mr-2">${icon}</span> <span>${msg}</span>${cursorHTML}`;
+        
+        logs.appendChild(div);
+        logs.scrollTop = logs.scrollHeight;
+    }
+</script>
+</body>
+</html>
